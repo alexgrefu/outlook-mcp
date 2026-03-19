@@ -4,6 +4,7 @@
 const config = require('../config');
 const { callGraphAPI } = require('../utils/graph-api');
 const { ensureAuthenticated } = require('../auth');
+const { getUserUpn, toUserDriveEndpoint } = require('./drive-helper');
 
 /**
  * List files handler
@@ -29,11 +30,22 @@ async function handleListFiles(args) {
 
     const queryParams = {
       $top: Math.min(50, count),
-      $select: config.ONEDRIVE_SELECT_FIELDS,
-      $orderby: 'name'
+      $select: config.ONEDRIVE_SELECT_FIELDS
     };
 
-    const response = await callGraphAPI(accessToken, 'GET', endpoint, null, queryParams);
+    // Try me/drive first, if 404 fall back to users/{upn}/drive
+    let response;
+    try {
+      response = await callGraphAPI(accessToken, 'GET', endpoint, null, queryParams);
+    } catch (error) {
+      if (error.message.includes('404') || error.message.includes('itemNotFound')) {
+        const upn = await getUserUpn(accessToken);
+        const fallbackEndpoint = toUserDriveEndpoint(endpoint, upn);
+        response = await callGraphAPI(accessToken, 'GET', fallbackEndpoint, null, queryParams);
+      } else {
+        throw error;
+      }
+    }
 
     if (!response.value || response.value.length === 0) {
       return {

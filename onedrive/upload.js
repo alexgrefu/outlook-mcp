@@ -4,6 +4,7 @@
 const config = require('../config');
 const { callGraphAPI } = require('../utils/graph-api');
 const { ensureAuthenticated } = require('../auth');
+const { getUserUpn, toUserDriveEndpoint } = require('./drive-helper');
 
 /**
  * Simple upload handler (for files < 4MB)
@@ -56,7 +57,19 @@ async function handleUpload(args) {
       '@microsoft.graph.conflictBehavior': conflictBehavior
     };
 
-    const response = await callGraphAPI(accessToken, 'PUT', endpoint, content, queryParams);
+    // Try me/drive first, if 404 fall back to users/{upn}/drive
+    let response;
+    try {
+      response = await callGraphAPI(accessToken, 'PUT', endpoint, content, queryParams);
+    } catch (error) {
+      if (error.message.includes('404') || error.message.includes('itemNotFound')) {
+        const upn = await getUserUpn(accessToken);
+        const fallbackEndpoint = toUserDriveEndpoint(endpoint, upn);
+        response = await callGraphAPI(accessToken, 'PUT', fallbackEndpoint, content, queryParams);
+      } else {
+        throw error;
+      }
+    }
 
     if (!response || !response.id) {
       return {

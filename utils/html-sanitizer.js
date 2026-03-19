@@ -16,42 +16,85 @@
  */
 
 // Invisible Unicode characters that could hide text
-const INVISIBLE_CHARS_REGEX = /[\u200B-\u200D\u2060\u2061-\u2064\u206A-\u206F\uFEFF\u00AD\u034F\u061C\u180E\u2028\u2029\u202A-\u202E]/g;
+const INVISIBLE_CHARS_REGEX =
+  /[\u200B-\u200D\u2060\u2061-\u2064\u206A-\u206F\uFEFF\u00AD\u034F\u061C\u180E\u2028\u2029\u202A-\u202E]/g;
 
 // CSS properties that hide content - patterns to detect
 const HIDING_CSS_PATTERNS = [
   /display\s*:\s*none/i,
   /visibility\s*:\s*hidden/i,
-  /opacity\s*:\s*0\b/i,  // opacity:0 followed by word boundary
+  /opacity\s*:\s*0\b/i, // opacity:0 followed by word boundary
   /font-size\s*:\s*0(?:px|em|rem|%|pt)?\s*[;}"']/i,
   /height\s*:\s*0(?:px|em|rem|%|pt)?\s*[;}"']/i,
   /width\s*:\s*0(?:px|em|rem|%|pt)?\s*[;}"']/i,
   /max-height\s*:\s*0/i,
   /max-width\s*:\s*0/i,
   /overflow\s*:\s*hidden/i,
-  /text-indent\s*:\s*-\d{3,}/i,  // Large negative text-indent
-  /left\s*:\s*-\d{4,}/i,         // Off-screen left positioning
-  /top\s*:\s*-\d{4,}/i,          // Off-screen top positioning
+  /text-indent\s*:\s*-\d{3,}/i, // Large negative text-indent
+  /left\s*:\s*-\d{4,}/i, // Off-screen left positioning
+  /top\s*:\s*-\d{4,}/i, // Off-screen top positioning
   /clip\s*:\s*rect\s*\(\s*0/i,
   /color\s*:\s*(?:transparent|rgba?\s*\([^)]*,\s*0\s*\))/i,
-  /color\s*:\s*white[^;]*background[^:]*:\s*white/i,  // White on white
-  /background[^:]*:\s*white[^;]*color\s*:\s*white/i,  // White on white (reverse)
-  /font-size\s*:\s*[01]px/i,  // 0px or 1px font
+  /color\s*:\s*white[^;]*background[^:]*:\s*white/i, // White on white
+  /background[^:]*:\s*white[^;]*color\s*:\s*white/i, // White on white (reverse)
+  /font-size\s*:\s*[01]px/i, // 0px or 1px font
 ];
 
 // Elements that should be completely removed (content and all)
 const REMOVE_ELEMENTS = new Set([
-  'script', 'style', 'head', 'meta', 'link', 'noscript',
-  'template', 'iframe', 'object', 'embed', 'applet',
-  'svg', 'math', 'canvas', 'audio', 'video', 'source', 'track'
+  'script',
+  'style',
+  'head',
+  'meta',
+  'link',
+  'noscript',
+  'template',
+  'iframe',
+  'object',
+  'embed',
+  'applet',
+  'svg',
+  'math',
+  'canvas',
+  'audio',
+  'video',
+  'source',
+  'track',
 ]);
 
 // Elements that are structural/block-level (add newlines)
 const BLOCK_ELEMENTS = new Set([
-  'p', 'div', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-  'ul', 'ol', 'li', 'table', 'tr', 'td', 'th', 'thead', 'tbody',
-  'blockquote', 'pre', 'address', 'article', 'aside', 'section',
-  'header', 'footer', 'nav', 'main', 'figure', 'figcaption'
+  'p',
+  'div',
+  'br',
+  'hr',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'ul',
+  'ol',
+  'li',
+  'table',
+  'tr',
+  'td',
+  'th',
+  'thead',
+  'tbody',
+  'blockquote',
+  'pre',
+  'address',
+  'article',
+  'aside',
+  'section',
+  'header',
+  'footer',
+  'nav',
+  'main',
+  'figure',
+  'figcaption',
 ]);
 
 /**
@@ -61,7 +104,7 @@ const BLOCK_ELEMENTS = new Set([
  */
 function hasHidingCSS(style) {
   if (!style) return false;
-  return HIDING_CSS_PATTERNS.some(pattern => pattern.test(style));
+  return HIDING_CSS_PATTERNS.some((pattern) => pattern.test(style));
 }
 
 /**
@@ -84,7 +127,11 @@ function hasHidingAttributes(attribs) {
   // Check for suspicious classes (common hiding class names)
   if (attribs.class) {
     const className = attribs.class.toLowerCase();
-    if (/\b(hidden|hide|invisible|sr-only|visually-hidden|screen-reader)\b/.test(className)) {
+    if (
+      /\b(hidden|hide|invisible|sr-only|visually-hidden|screen-reader)\b/.test(
+        className,
+      )
+    ) {
       return true;
     }
   }
@@ -140,7 +187,7 @@ function sanitizeHtmlToText(html) {
     // Match opening tags with the hiding style
     const tagPattern = new RegExp(
       `<(\\w+)([^>]*style\\s*=\\s*["'][^"']*${stylePattern}[^"']*["'][^>]*)>`,
-      'gi'
+      'gi',
     );
 
     let match;
@@ -148,7 +195,10 @@ function sanitizeHtmlToText(html) {
     let iterations = 0;
     const maxIterations = 100; // Prevent infinite loops
 
-    while ((match = tagPattern.exec(lastHtml)) !== null && iterations < maxIterations) {
+    while (
+      (match = tagPattern.exec(lastHtml)) !== null &&
+      iterations < maxIterations
+    ) {
       const tagName = match[1];
       const fullMatch = match[0];
       const startIndex = match.index;
@@ -160,12 +210,18 @@ function sanitizeHtmlToText(html) {
 
       if (closeMatch) {
         // Remove from opening tag through closing tag
-        const endIndex = startIndex + fullMatch.length + closeMatch.index + closeMatch[0].length;
+        const endIndex =
+          startIndex +
+          fullMatch.length +
+          closeMatch.index +
+          closeMatch[0].length;
         lastHtml = lastHtml.slice(0, startIndex) + lastHtml.slice(endIndex);
         tagPattern.lastIndex = startIndex; // Reset to check from removal point
       } else {
         // No closing tag - just remove the opening tag
-        lastHtml = lastHtml.slice(0, startIndex) + lastHtml.slice(startIndex + fullMatch.length);
+        lastHtml =
+          lastHtml.slice(0, startIndex) +
+          lastHtml.slice(startIndex + fullMatch.length);
         tagPattern.lastIndex = startIndex;
       }
       iterations++;
@@ -184,33 +240,54 @@ function sanitizeHtmlToText(html) {
   result = removeHiddenElements(result, 'opacity\\s*:\\s*0(?![0-9])');
 
   // 4d: font-size:0 or font-size:1px (with or without units)
-  result = removeHiddenElements(result, 'font-size\\s*:\\s*[01](?:px|em|rem|pt|%)?(?![0-9])');
+  result = removeHiddenElements(
+    result,
+    'font-size\\s*:\\s*[01](?:px|em|rem|pt|%)?(?![0-9])',
+  );
 
   // 4e: zero-height with overflow:hidden (commonly used to hide text)
-  result = removeHiddenElements(result, 'height\\s*:\\s*0(?:px|em|rem|pt|%)?[^\"\\']*overflow\\s*:\\s*hidden');
+  result = removeHiddenElements(
+    result,
+    'height\\s*:\\s*0(?:px|em|rem|pt|%)?[^"]*overflow\\s*:\\s*hidden',
+  );
 
   // 4f: white-on-white text (color:white with background:white in same style)
-  result = removeHiddenElements(result, 'color\\s*:\\s*white[^\"\\']*background[^\"\\']*:\\s*white');
-  result = removeHiddenElements(result, 'background[^\"\\']*:\\s*white[^\"\\']*color\\s*:\\s*white');
+  result = removeHiddenElements(
+    result,
+    'color\\s*:\\s*white[^"]*background[^"]*:\\s*white',
+  );
+  result = removeHiddenElements(
+    result,
+    'background[^"]*:\\s*white[^"]*color\\s*:\\s*white',
+  );
 
   // 4g: Also remove self-closing tags with hiding styles (like hidden images with alt text)
-  result = result.replace(/<[^>]+style\s*=\s*["'][^"']*(?:display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0\b)[^"']*["'][^>]*\/?>/gi, '');
+  result = result.replace(
+    /<[^>]+style\s*=\s*["'][^"']*(?:display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0\b)[^"']*["'][^>]*\/?>/gi,
+    '',
+  );
 
   // Step 5: Remove elements with hidden attribute
   result = result.replace(/<[^>]+\bhidden\b[^>]*>[\s\S]*?<\/[^>]+>/gi, '');
 
   // Step 6: Remove elements with aria-hidden="true"
-  result = result.replace(/<[^>]+aria-hidden\s*=\s*["']true["'][^>]*>[\s\S]*?<\/[^>]+>/gi, '');
+  result = result.replace(
+    /<[^>]+aria-hidden\s*=\s*["']true["'][^>]*>[\s\S]*?<\/[^>]+>/gi,
+    '',
+  );
 
   // Step 7: Convert links to markdown format [text](url) - preserve visible info
-  result = result.replace(/<a[^>]+href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (match, url, text) => {
-    const cleanText = text.replace(/<[^>]*>/g, '').trim();
-    // Only include link if URL looks safe (no javascript:, data:, etc.)
-    if (/^(https?:\/\/|mailto:|\/)/i.test(url)) {
-      return cleanText ? `[${cleanText}](${url})` : '';
-    }
-    return cleanText;
-  });
+  result = result.replace(
+    /<a[^>]+href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
+    (match, url, text) => {
+      const cleanText = text.replace(/<[^>]*>/g, '').trim();
+      // Only include link if URL looks safe (no javascript:, data:, etc.)
+      if (/^(https?:\/\/|mailto:|\/)/i.test(url)) {
+        return cleanText ? `[${cleanText}](${url})` : '';
+      }
+      return cleanText;
+    },
+  );
 
   // Step 8: Convert emphasis
   result = result.replace(/<(strong|b)[^>]*>([\s\S]*?)<\/\1>/gi, '**$2**');
@@ -225,10 +302,16 @@ function sanitizeHtmlToText(html) {
   result = result.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n### $1\n');
 
   // Step 11: Convert blockquotes
-  result = result.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (match, content) => {
-    const lines = content.split('\n').map(line => `> ${line}`).join('\n');
-    return '\n' + lines + '\n';
-  });
+  result = result.replace(
+    /<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi,
+    (match, content) => {
+      const lines = content
+        .split('\n')
+        .map((line) => `> ${line}`)
+        .join('\n');
+      return '\n' + lines + '\n';
+    },
+  );
 
   // Step 12: Add newlines for block elements
   for (const tag of BLOCK_ELEMENTS) {
@@ -250,11 +333,11 @@ function sanitizeHtmlToText(html) {
 
   // Step 17: Normalize whitespace
   result = result
-    .replace(/[ \t]+/g, ' ')           // Collapse horizontal whitespace
-    .replace(/\n\s*\n\s*\n/g, '\n\n')  // Max 2 consecutive newlines
-    .replace(/^\s+|\s+$/g, '')          // Trim
-    .replace(/\n +/g, '\n')             // Remove leading spaces on lines
-    .replace(/ +\n/g, '\n');            // Remove trailing spaces on lines
+    .replace(/[ \t]+/g, ' ') // Collapse horizontal whitespace
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Max 2 consecutive newlines
+    .replace(/^\s+|\s+$/g, '') // Trim
+    .replace(/\n +/g, '\n') // Remove leading spaces on lines
+    .replace(/ +\n/g, '\n'); // Remove trailing spaces on lines
 
   return result;
 }
@@ -346,11 +429,7 @@ function wrapEmailContent(content, metadata = {}) {
  * @returns {string} - Safe text content
  */
 function processHtmlEmail(html, options = {}) {
-  const {
-    preserveLinks = true,
-    addBoundary = true,
-    metadata = {}
-  } = options;
+  const { preserveLinks = true, addBoundary = true, metadata = {} } = options;
 
   // Sanitize the HTML to visible text only
   let content = sanitizeHtmlToText(html);
@@ -374,5 +453,5 @@ module.exports = {
   INVISIBLE_CHARS_REGEX,
   HIDING_CSS_PATTERNS,
   REMOVE_ELEMENTS,
-  BLOCK_ELEMENTS
+  BLOCK_ELEMENTS,
 };

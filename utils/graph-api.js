@@ -32,45 +32,29 @@ async function callGraphAPI(accessToken, method, path, data = null, queryParams 
       console.error(`Using full URL from nextLink: ${finalUrl}`);
     } else {
       // Build URL from path and queryParams
-      // Encode path segments properly
-      const encodedPath = path.split('/')
-        .map(segment => encodeURIComponent(segment))
-        .join('/');
+      // Use path as-is — Graph API paths (including OneDrive colon syntax) must not be re-encoded
+      const safePath = path;
       
-      // Build query string from parameters with special handling for OData filters
+      // Build query string — preserve OData $ prefixes and don't encode values that
+      // contain commas/colons needed by Graph API (e.g. $select, $filter, $orderby)
       let queryString = '';
       if (Object.keys(queryParams).length > 0) {
-        // Handle $filter parameter specially to ensure proper URI encoding
-        const filter = queryParams.$filter;
-        if (filter) {
-          delete queryParams.$filter; // Remove from regular params
-        }
-        
-        // Build query string with proper encoding for regular params
-        const params = new URLSearchParams();
-        for (const [key, value] of Object.entries(queryParams)) {
-          params.append(key, value);
-        }
-        
-        queryString = params.toString();
-        
-        // Add filter parameter separately with proper encoding
-        if (filter) {
-          if (queryString) {
-            queryString += `&$filter=${encodeURIComponent(filter)}`;
-          } else {
-            queryString = `$filter=${encodeURIComponent(filter)}`;
-          }
-        }
-        
-        if (queryString) {
-          queryString = '?' + queryString;
-        }
-        
+        queryString = '?' + Object.entries(queryParams)
+          .map(([key, value]) => {
+            // Don't encode $select, $expand, $orderby, $filter values - they contain commas and colons
+            // that must remain literal for the Graph API to parse correctly
+            const skipEncoding = ['$select', '$expand', '$orderby', '$filter'];
+            if (skipEncoding.includes(key)) {
+              return `${key}=${value}`;
+            }
+            return `${key}=${encodeURIComponent(value)}`;
+          })
+          .join('&');
+
         console.error(`Query string: ${queryString}`);
       }
       
-      finalUrl = `${config.GRAPH_API_ENDPOINT}${encodedPath}${queryString}`;
+      finalUrl = `${config.GRAPH_API_ENDPOINT}${safePath}${queryString}`;
       console.error(`Full URL: ${finalUrl}`);
     }
     

@@ -3,6 +3,7 @@
  */
 const { callGraphAPI } = require('../utils/graph-api');
 const { ensureAuthenticated } = require('../auth');
+const { getUserUpn, toUserDriveEndpoint } = require('./drive-helper');
 
 /**
  * Create folder handler
@@ -106,8 +107,19 @@ async function handleDeleteItem(args) {
       endpoint = `me/drive/root:/${normalizedPath}`;
     }
 
-    // Get item info first
-    const itemInfo = await callGraphAPI(accessToken, 'GET', endpoint);
+    // Get item info first — try me/drive, fall back to users/{upn}/drive on 404
+    let itemInfo;
+    try {
+      itemInfo = await callGraphAPI(accessToken, 'GET', endpoint);
+    } catch (error) {
+      if (error.message.includes('404') || error.message.includes('itemNotFound')) {
+        const upn = await getUserUpn(accessToken);
+        const fallbackEndpoint = toUserDriveEndpoint(endpoint, upn);
+        itemInfo = await callGraphAPI(accessToken, 'GET', fallbackEndpoint);
+      } else {
+        throw error;
+      }
+    }
 
     if (!itemInfo || !itemInfo.id) {
       return {
@@ -121,9 +133,19 @@ async function handleDeleteItem(args) {
     const itemName = itemInfo.name;
     const isFolder = !!itemInfo.folder;
 
-    // Delete the item
+    // Delete the item — try me/drive, fall back to users/{upn}/drive on 404
     const deleteEndpoint = `me/drive/items/${itemInfo.id}`;
-    await callGraphAPI(accessToken, 'DELETE', deleteEndpoint);
+    try {
+      await callGraphAPI(accessToken, 'DELETE', deleteEndpoint);
+    } catch (error) {
+      if (error.message.includes('404') || error.message.includes('itemNotFound')) {
+        const upn = await getUserUpn(accessToken);
+        const fallbackDeleteEndpoint = toUserDriveEndpoint(deleteEndpoint, upn);
+        await callGraphAPI(accessToken, 'DELETE', fallbackDeleteEndpoint);
+      } else {
+        throw error;
+      }
+    }
 
     return {
       content: [{
