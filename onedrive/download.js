@@ -35,9 +35,10 @@ async function handleDownload(args) {
       endpoint = `me/drive/root:/${normalizedPath}`;
     }
 
-    // Get item metadata with download URL
+    // Get item metadata — @microsoft.graph.downloadUrl is an annotation that
+    // the API includes automatically; putting it in $select causes it to be omitted
     const queryParams = {
-      $select: 'id,name,size,@microsoft.graph.downloadUrl'
+      $select: 'id,name,size'
     };
 
     // Try me/drive first, if 404 fall back to users/{upn}/drive
