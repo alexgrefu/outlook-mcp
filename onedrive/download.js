@@ -35,21 +35,17 @@ async function handleDownload(args) {
       endpoint = `me/drive/root:/${normalizedPath}`;
     }
 
-    // Get item metadata — @microsoft.graph.downloadUrl is an annotation that
-    // the API includes automatically; putting it in $select causes it to be omitted
-    const queryParams = {
-      $select: 'id,name,size'
-    };
-
-    // Try me/drive first, if 404 fall back to users/{upn}/drive
+    // Fetch full item metadata — do NOT use $select here because the
+    // @microsoft.graph.downloadUrl annotation is omitted when $select is present
+    // on many OneDrive for Business tenants
     let response;
     try {
-      response = await callGraphAPI(accessToken, 'GET', endpoint, null, queryParams);
+      response = await callGraphAPI(accessToken, 'GET', endpoint);
     } catch (error) {
       if (error.message.includes('404') || error.message.includes('itemNotFound')) {
         const upn = await getUserUpn(accessToken);
         const fallbackEndpoint = toUserDriveEndpoint(endpoint, upn);
-        response = await callGraphAPI(accessToken, 'GET', fallbackEndpoint, null, queryParams);
+        response = await callGraphAPI(accessToken, 'GET', fallbackEndpoint);
       } else {
         throw error;
       }
